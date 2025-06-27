@@ -2,16 +2,20 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, ChatRoom, Message, generate_room_code, generate_verification_code
+from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
+import string
+import random
 
+# Initialize Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat_app.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///chat_app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-db.init_app(app)
+# Initialize extensions
+db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Initialize Flask-Login
@@ -19,9 +23,51 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+# Database Models
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(100), nullable=False)
+    verification_code = db.Column(db.String(10), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class ChatRoom(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(8), unique=True, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(50), nullable=False)
+    is_public = db.Column(db.Boolean, default=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    room_code = db.Column(db.String(8), db.ForeignKey('chat_room.code'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    user = db.relationship('User', backref='messages')
+    room = db.relationship('ChatRoom', backref='messages')
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+def generate_room_code():
+    chars = string.ascii_uppercase + string.digits
+    code = ''.join(random.choices(chars, k=8))
+    while ChatRoom.query.filter_by(code=code).first():
+        code = ''.join(random.choices(chars, k=8))
+    return code
+
+def generate_verification_code():
+    chars = string.ascii_uppercase + string.digits
+    code = ''.join(random.choices(chars, k=10))
+    while User.query.filter_by(verification_code=code).first():
+        code = ''.join(random.choices(chars, k=10))
+    return code
 
 # Public room categories
 PUBLIC_ROOMS = {
@@ -46,6 +92,7 @@ def create_public_rooms():
                 db.session.add(room)
     db.session.commit()
 
+# Routes
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -61,7 +108,6 @@ def register():
             flash('Email already exists!')
             return redirect(url_for('register'))
         
-        # Generate unique verification code
         verification_code = generate_verification_code()
         hashed_password = generate_password_hash(password)
         
@@ -148,13 +194,19 @@ def chat(room_code):
         flash('Room not found!')
         return redirect(url_for('lobby'))
     
-    # Get ALL messages for this room (chat history)
     messages = Message.query.filter_by(room_code=room_code)\
                           .order_by(Message.timestamp.asc()).all()
     
     return render_template('chat.html', room=room, messages=messages)
 
-# Socket.IO Events - FIXED MESSAGE HANDLING
+# Socket.IO Events
+@socketio.on('connect')
+def on_connect():
+    if current_user.is_authenticated:
+        print(f'User {current_user.name} connected')
+    else:
+        return False
+
 @socketio.on('join')
 def on_join(data):
     room_code = data['room']
@@ -178,7 +230,6 @@ def handle_message(data):
     room_code = data['room']
     content = data['message']
     
-    # Save message to database
     message = Message(
         content=content,
         user_id=current_user.id,
@@ -187,7 +238,6 @@ def handle_message(data):
     db.session.add(message)
     db.session.commit()
     
-    # Broadcast message with verification code - FIXED
     emit('message', {
         'message': content,
         'username': current_user.name,
@@ -195,21 +245,23 @@ def handle_message(data):
         'timestamp': datetime.now().strftime('%H:%M')
     }, room=room_code)
 
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        # Create admin user with verification code
-        admin = User.query.filter_by(id=1).first()
-        if not admin:
-            admin_user = User(
-                name='Admin',
-                email='admin@chat.com',
-                password=generate_password_hash('admin123'),
-                verification_code='ADMIN12345'
-            )
-            db.session.add(admin_user)
-            db.session.commit()
-        
-        create_public_rooms()
+# Initialize database and create tables
+with app.app_context():
+    db.create_all()
+    # Create admin user
+    admin = User.query.filter_by(id=1).first()
+    if not admin:
+        admin_user = User(
+            name='Admin',
+            email='admin@chat.com',
+            password=generate_password_hash('admin123'),
+            verification_code='ADMIN12345'
+        )
+        db.session.add(admin_user)
+        db.session.commit()
     
-    socketio.run(app, debug=True)
+    create_public_rooms()
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    socketio.run(app, host='0.0.0.0', port=port, debug=False)
