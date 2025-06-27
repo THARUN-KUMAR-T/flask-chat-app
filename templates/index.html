@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome - Chat App{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 text-center">
+        <div class="hero-section py-5">
+            <h1 class="display-4 mb-4">💬 Welcome to ChatApp</h1>
+            <p class="lead mb-5">Connect with students, parents, political enthusiasts, and entertainment lovers in real-time chat rooms!</p>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">🎓 Students</h5>
+                            <p class="card-text">Join IIT communities and connect with fellow students</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">👨‍👩‍👧‍👦 Parents</h5>
+                            <p class="card-text">Share parenting tips and experiences</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">🏛️ Political</h5>
+                            <p class="card-text">Discuss politics with like-minded people</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">🎭 Entertainment</h5>
+                            <p class="card-text">Share jokes and have fun conversations</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-5">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('lobby') }}" class="btn btn-primary btn-lg me-3">
+                        Enter Chat Rooms
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg me-3">
+                        Get Started
+                    </a>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg">
+                        Login
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">✨ Features</h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                        <p><strong>Public Rooms</strong><br>Join organized chat rooms by category</p>
+                    </div>
+                    <div class="col-md-3">
+                        <i class="fas fa-plus fa-2x text-success mb-2"></i>
+                        <p><strong>Custom Rooms</strong><br>Create your own private chat rooms</p>
+                    </div>
+                    <div class="col-md-3">
+                        <i class="fas fa-bolt fa-2x text-warning mb-2"></i>
+                        <p><strong>Real-time</strong><br>Instant messaging with WebSocket</p>
+                    </div>
+                    <div class="col-md-3">
+                        <i class="fas fa-shield-alt fa-2x text-info mb-2"></i>
+                        <p><strong>Secure</strong><br>Safe authentication and data protection</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

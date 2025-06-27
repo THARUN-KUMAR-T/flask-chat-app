@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Lobby - Chat App{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h2 class="mb-4">🏠 Chat Rooms</h2>
+        
+        <!-- Public Rooms -->
+        {% for category, room_list in rooms.items() %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    {% if category == 'students' %}🎓 Students
+                    {% elif category == 'parents' %}👨‍👩‍👧‍👦 Parents
+                    {% elif category == 'political' %}🏛️ Political
+                    {% elif category == 'entertainment' %}🎭 Entertainment
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for room in room_list %}
+                    <div class="col-md-6 mb-2">
+                        <a href="{{ url_for('chat', room_code=room.code) }}" 
+                           class="btn btn-outline-primary w-100">
+                            {{ room.name }}
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">🚀 Custom Rooms</h5>
+            </div>
+            <div class="card-body">
+                <!-- Create Room -->
+                <form method="POST" action="{{ url_for('create_room') }}" class="mb-3">
+                    <div class="mb-3">
+                        <label class="form-label">Create New Room</label>
+                        <input type="text" class="form-control" name="room_name" 
+                               placeholder="Room name" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">Create Room</button>
+                </form>
+                
+                <hr>
+                
+                <!-- Join Room -->
+                <form method="POST" action="{{ url_for('join_room_route') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Join Existing Room</label>
+                        <input type="text" class="form-control" name="room_code" 
+                               placeholder="8-digit room code" maxlength="8" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Join Room</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

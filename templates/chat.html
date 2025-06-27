@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}{{ room.name }} - Chat{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3>💬 {{ room.name }}</h3>
+            <div>
+                <span class="badge bg-secondary">{{ room.code }}</span>
+                <span class="badge bg-info">Your Code: {{ current_user.verification_code }}</span>
+                <a href="{{ url_for('lobby') }}" class="btn btn-outline-secondary btn-sm">← Back to Lobby</a>
+            </div>
+        </div>
+        
+        <div class="card chat-container">
+            <div class="card-body" id="messages" style="height: 400px; overflow-y: auto;">
+                {% for message in messages %}
+                <div class="message mb-2">
+                    <small class="text-muted">{{ message.timestamp.strftime('%H:%M') }}</small>
+                    <strong class="username" style="cursor:pointer;" title="Click to see verification code" 
+                            data-verification="{{ message.user.verification_code }}">{{ message.user.name }}</strong>
+                    <span class="verification-code" style="display:none; margin-left: 5px; font-size: 0.8em; color: gray;">
+                        [{{ message.user.verification_code }}]
+                    </span>:
+                    <span>{{ message.content }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="card-footer">
+                <form id="messageForm" class="d-flex">
+                    <input type="text" id="messageInput" class="form-control me-2" 
+                           placeholder="Type your message..." maxlength="500" required>
+                    <button type="submit" class="btn btn-primary">Send</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script>
+    const socket = io();
+    const roomCode = '{{ room.code }}';
+    const messagesDiv = document.getElementById('messages');
+    
+    // Join room
+    socket.emit('join', {room: roomCode});
+    
+    // Add click listeners to existing usernames
+    document.querySelectorAll('.username').forEach(function(username) {
+        username.addEventListener('click', function() {
+            const codeSpan = this.nextElementSibling;
+            if (codeSpan.style.display === 'none') {
+                codeSpan.style.display = 'inline';
+            } else {
+                codeSpan.style.display = 'none';
+            }
+        });
+    });
+    
+    // Handle message form submission
+    document.getElementById('messageForm').onsubmit = function(e) {
+        e.preventDefault();
+        const input = document.getElementById('messageInput');
+        if (input.value.trim()) {
+            socket.emit('message', {
+                room: roomCode,
+                message: input.value
+            });
+            input.value = '';
+        }
+    };
+    
+    // Display new messages - FIXED
+    socket.on('message', function(data) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message mb-2';
+        messageDiv.innerHTML = `
+            <small class="text-muted">${data.timestamp}</small>
+            <strong class="username" style="cursor:pointer;" title="Click to see verification code">${data.username}</strong>
+            <span class="verification-code" style="display:none; margin-left: 5px; font-size: 0.8em; color: gray;">[${data.verification_code}]</span>:
+            <span>${data.message}</span>
+        `;
+        
+        // Add click listener to new username
+        messageDiv.querySelector('.username').addEventListener('click', function() {
+            const codeSpan = this.nextElementSibling;
+            if (codeSpan.style.display === 'none') {
+                codeSpan.style.display = 'inline';
+            } else {
+                codeSpan.style.display = 'none';
+            }
+        });
+        
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+    
+    // Display status messages
+    socket.on('status', function(data) {
+        const statusDiv = document.createElement('div');
+        statusDiv.className = 'text-muted small mb-2';
+        statusDiv.innerHTML = `<em>${data.msg}</em> <small>${data.timestamp}</small>`;
+        messagesDiv.appendChild(statusDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+    
+    // Auto-scroll to bottom on page load
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+</script>
+{% endblock %}
