@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -10,13 +10,13 @@ import random
 
 # Initialize Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///chat_app.db')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat_app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize extensions
 db = SQLAlchemy(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -90,7 +90,10 @@ def create_public_rooms():
                     created_by=1
                 )
                 db.session.add(room)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except:
+        db.session.rollback()
 
 # Routes
 @app.route('/')
@@ -204,51 +207,53 @@ def chat(room_code):
 def on_connect():
     if current_user.is_authenticated:
         print(f'User {current_user.name} connected')
-    else:
-        return False
+        return True
+    return False
 
 @socketio.on('join')
 def on_join(data):
-    room_code = data['room']
-    join_room(room_code)
-    emit('status', {
-        'msg': f"{current_user.name} has joined the room.",
-        'timestamp': datetime.now().strftime('%H:%M')
-    }, room=room_code)
+    if current_user.is_authenticated:
+        room_code = data['room']
+        join_room(room_code)
+        emit('status', {
+            'msg': f"{current_user.name} has joined the room.",
+            'timestamp': datetime.now().strftime('%H:%M')
+        }, room=room_code)
 
 @socketio.on('leave')
 def on_leave(data):
-    room_code = data['room']
-    leave_room(room_code)
-    emit('status', {
-        'msg': f"{current_user.name} has left the room.",
-        'timestamp': datetime.now().strftime('%H:%M')
-    }, room=room_code)
+    if current_user.is_authenticated:
+        room_code = data['room']
+        leave_room(room_code)
+        emit('status', {
+            'msg': f"{current_user.name} has left the room.",
+            'timestamp': datetime.now().strftime('%H:%M')
+        }, room=room_code)
 
 @socketio.on('message')
 def handle_message(data):
-    room_code = data['room']
-    content = data['message']
-    
-    message = Message(
-        content=content,
-        user_id=current_user.id,
-        room_code=room_code
-    )
-    db.session.add(message)
-    db.session.commit()
-    
-    emit('message', {
-        'message': content,
-        'username': current_user.name,
-        'verification_code': current_user.verification_code,
-        'timestamp': datetime.now().strftime('%H:%M')
-    }, room=room_code)
+    if current_user.is_authenticated:
+        room_code = data['room']
+        content = data['message']
+        
+        message = Message(
+            content=content,
+            user_id=current_user.id,
+            room_code=room_code
+        )
+        db.session.add(message)
+        db.session.commit()
+        
+        emit('message', {
+            'message': content,
+            'username': current_user.name,
+            'verification_code': current_user.verification_code,
+            'timestamp': datetime.now().strftime('%H:%M')
+        }, room=room_code)
 
-# Initialize database and create tables
+# Initialize database
 with app.app_context():
     db.create_all()
-    # Create admin user
     admin = User.query.filter_by(id=1).first()
     if not admin:
         admin_user = User(
