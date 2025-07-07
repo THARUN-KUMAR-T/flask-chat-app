@@ -1,98 +1,99 @@
-Flask Chat App
-A real-time chat application built with Flask, Flask-SocketIO and Bootstrap.
-It lets multiple users join named rooms and exchange messages instantly through WebSockets.
+# Flask Chat App
 
-Features
-Real-time messaging with Flask-SocketIO (WebSocket fallback to long-polling)
+A lightweight, real-time chat application built using Flask and Flask-SocketIO. This application allows users to join chat rooms, send messages, and see updates instantly without reloading the page.
 
-Create or join chat rooms by name
+## Features
 
-Display online users in each room
+* **Real-Time Messaging:** Instant message delivery powered by WebSockets.
+* **Multiple Chat Rooms:** Users can join existing rooms or create new ones by name.
+* **User Nicknames:** Choose a nickname upon joining for easy identification.
+* **Responsive UI:** Clean and minimalistic interface that adapts to different screen sizes.
 
-Typing indicator
+## Demo
 
-Responsive interface styled with Bootstrap 5
+![Chat App Screenshot](docs/images/chat_screenshot.png)
 
-Docker-ready & easily deployable to Heroku, Render, Fly.io, etc.
+> Note: You can run the app locally and navigate to `http://localhost:5000` to try it out.
 
-Demo
-bash
-# Clone and run locally
-git clone https://github.com/THARUN-KUMAR-T/flask-chat-app.git
-cd flask-chat-app
-pip install -r requirements.txt
-python app.py
-# open http://127.0.0.1:5000 in two browser tabs and start chatting
-Project Structure
-Path	Purpose
-app.py	Flask application factory & SocketIO events
-templates/	Jinja2 HTML templates (index.html, chat.html)
-static/js/	Front-end SocketIO logic (chat.js)
-static/css/	Custom styles
-requirements.txt	Python dependencies
-Dockerfile	Container build instructions
-Procfile	Heroku/Render launch command
-Installation
-Prerequisites
-Python 3.9+
+## Installation
 
-Node.js (only if you plan to bundle front-end assets yourself)
+1. **Clone the repository**
 
-(Optional) Docker
+   ```bash
+   git clone https://github.com/THARUN-KUMAR-T/flask-chat-app.git
+   cd flask-chat-app
+   ```
 
-Steps
-bash
-# 1. Clone repository
-git clone https://github.com/THARUN-KUMAR-T/flask-chat-app.git
-cd flask-chat-app
+2. **Create a virtual environment** (optional but recommended)
 
-# 2. Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate   # On Windows, use `venv\\Scripts\\activate`
+   ```
 
-# 3. Install dependencies
-pip install -r requirements.txt
+3. **Install dependencies**
 
-# 4. Run application
-python app.py
-The server starts at http://127.0.0.1:5000.
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Environment Variables
-Variable	Default	Description
-FLASK_ENV	development	Set to production in prod
-SECRET_KEY	supersecretkey	Flask session encryption
-PORT	5000	Port to bind (useful for Heroku)
-Create a .env file or export variables before running:
+## Configuration
 
-bash
-export SECRET_KEY="change_this_value"
-export FLASK_ENV=production
-Running with Docker
-bash
-docker build -t flask-chat .
-docker run -d -p 5000:5000 --name chatapp flask-chat
-Deployment Guide
-Heroku / Render / Fly.io
-Set buildpacks: heroku/python, optionally heroku/nodejs
+If you need to customize the server or SocketIO settings, you can modify the following files:
 
-Add environment variables (SECRET_KEY, PORT)
+* **`main.py`**: Entry point of the application.
+* **`chat_room.py`**: Contains the SocketIO event handlers and room logic.
 
-Deploy; the Procfile (web: gunicorn app:app) will start Gunicorn with eventlet.
+No additional configuration is required for a local development environment.
 
-Nginx + Gunicorn
-bash
-pip install gunicorn eventlet
-gunicorn app:app --worker-class eventlet -w 1 --bind 0.0.0.0:8000
-Then proxy location /socket.io and / through Nginx.
+## Usage
 
-Contributing
-Fork the repo & create your branch (git checkout -b feature/foo)
+1. **Start the server**
 
-Commit your changes (git commit -am 'Add foo')
+   ```bash
+   python main.py
+   ```
 
-Push to the branch (git push origin feature/foo)
+2. **Open your browser** and go to:
 
-Open a Pull Request
+   ```
+   http://localhost:5000
+   ```
 
-License
-This project is released under the MIT License — feel free to use and modify it.
+3. **Enter a nickname and room name** to join or create a chat room.
+
+4. **Start chatting!** Messages will appear in real time.
+
+## Project Structure
+
+```
+flask-chat-app/
+├── static/
+│   ├── styles/        # CSS stylesheets
+│   └── scripts/       # JavaScript client-side logic
+├── templates/
+│   └── index.html     # Main HTML template
+├── chat_room.py       # SocketIO event handlers
+├── main.py            # Flask application entry point
+├── requirements.txt   # Python dependencies
+└── README.md          # This file
+```
+
+## Contributing
+
+Contributions are welcome! Feel free to:
+
+* Submit bug reports or feature requests via GitHub Issues.
+* Fork the repository and submit pull requests.
+
+Please follow the [Python PEP8 style guide](https://www.python.org/dev/peps/pep-0008/) when contributing.
+
+## License
+
+This project is licensed under the MIT License. See the `LICENSE` file for details.
+
+## Acknowledgements
+
+* [Flask](https://flask.palletsprojects.com/) for the web framework.
+* [Flask-SocketIO](https://flask-socketio.readthedocs.io/) for real-time support.
+* Inspired by various Flask tutorial projects.
